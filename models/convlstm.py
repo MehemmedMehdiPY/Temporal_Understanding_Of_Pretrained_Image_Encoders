@@ -62,7 +62,7 @@ class ConvLSTMCell(nn.Module):
     def forward_first_layer(self, input):
         x, (hidden_gate, cell_gate) = input
         batch_size, seq_size, _, h, w = x.size()
-        all_gates = torch.zeros(3, batch_size, seq_size, self.hidden_size, h, w)
+        all_gates = torch.zeros(3, batch_size, seq_size, self.hidden_size, h, w).to(x.device)
         for idx in range(seq_size):
             x_input = x[:, idx, :, :, :]
             output_gate, (hidden_gate, cell_gate) = self.forward_cell(
@@ -74,7 +74,7 @@ class ConvLSTMCell(nn.Module):
     def forward_intermediate_layer(self, input):
         x, (hidden_gates, cell_gates) = input
         batch_size, seq_size, _, h, w = x.size()
-        all_gates = torch.zeros(3, batch_size, seq_size, self.hidden_size, h, w)
+        all_gates = torch.zeros(3, batch_size, seq_size, self.hidden_size, h, w).to(x.device)
         for idx in range(seq_size):
             x_input = x[:, idx, :, :, :]
             output_gate, (hidden_gate, cell_gate) = self.forward_cell(
@@ -171,8 +171,8 @@ class ConvLSTM(nn.Module):
 
     def forward(self, x):
         batch_size, seq_size, _, w, h = x.size()
-        hidden_gate = torch.zeros(batch_size, self.hidden_size[0], w, h)
-        cell_gate = torch.zeros(batch_size, self.hidden_size[0], w, h)
+        hidden_gate = torch.zeros(batch_size, self.hidden_size[0], w, h).to(torch.float32).to(x.device)
+        cell_gate = torch.zeros(batch_size, self.hidden_size[0], w, h).to(torch.float32).to(x.device)
         output_gate, (hidden_gate, cell_gate) = self.cell(
             (x, (hidden_gate, cell_gate))
             )
