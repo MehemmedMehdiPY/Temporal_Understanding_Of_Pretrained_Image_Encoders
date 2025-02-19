@@ -8,7 +8,7 @@ class FramePredictor(nn.Module):
         super().__init__()
         self.input_size = input_size
         self.hidden_size = hidden_size
-        self.backbone = ConvLSTM(input_size=input_size, hidden_size=hidden_size, kernel_size=kernel_size, num_layers=3)
+        self.backbone = ConvLSTM(input_size=input_size, hidden_size=hidden_size, kernel_size=kernel_size, num_layers=2)
         self.conv = nn.Conv2d(in_channels=hidden_size, out_channels=input_size[0], kernel_size=kernel_size, padding="same")
         
     def forward(self, x):

@@ -2,8 +2,11 @@ import numpy as np
 import torch
 from torch import nn
 from torch import optim
+from torch.utils.data import DataLoader
 import matplotlib.pyplot as plt
 from models import FramePredictor
+from utils.processing import MovingMNIST
+from utils.train import Trainer
 from PIL import Image
 
 def save(out, i: int):
@@ -13,37 +16,24 @@ def save(out, i: int):
     image = Image.fromarray(out)
     image.save("./images/image_{}.png".format(i))
 
-DEVICE = "cuda"
+DEVICE = "cpu"
 
-image = np.load("../data/sample.npy")
-print(np.unique(image))
+dataset = MovingMNIST("../data")
+X, Y = dataset[0]
+print(X.shape, Y.shape)
+print(X.dtype, Y.dtype)
 
-lim = 150 / 255
-image = (image - 0) / (255 - 0)
-image[image >= lim] = 1
-image[image < lim] = 0
+train_loader = DataLoader(dataset, batch_size=16, shuffle=True)
+val_loader = DataLoader(dataset, batch_size=256, shuffle=False)
 
-image = torch.tensor(image[None, :, None, :]).to(torch.float32)
-x = image[:, :3].to(DEVICE)
-y = image[:, 3].to(DEVICE)
-
-print(x.shape, y.shape)
-
-model = FramePredictor(input_size=(1, 64, 64), kernel_size=3, hidden_size=64).to(DEVICE)
+model = FramePredictor(input_size=(1, 64, 64), kernel_size=3, hidden_size=32).to(DEVICE)
 optimizer = optim.Adam(params=model.parameters(), lr=0.0005)
 loss_fn = nn.BCELoss()
+trainer = Trainer(
+    model=model, train_loader=train_loader, val_loader=val_loader,
+    optimizer=optimizer, loss_fn=loss_fn, epochs=2, filepath="./saved_models/model.pt")
 
-for i in range(1000):
-    optimizer.zero_grad()
-    o = model(x)
-    loss = loss_fn(o, y)
-    loss.backward()
-    optimizer.step()
-    loss_item = loss.item()
-    save(o, i)
-
-    if i % 100 == 0:
-        print(i)
-
-checkpoints = model.state_dict()
-torch.save(checkpoints, "./saved_models/trial_model.pt")
+for X, Y in train_loader:
+    model(X)
+    break
+# trainer.run()

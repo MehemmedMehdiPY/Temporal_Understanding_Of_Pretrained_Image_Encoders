@@ -8,7 +8,7 @@ from tqdm import tqdm
 class Trainer:
     def __init__(self, model: torch.nn.Module, train_loader, val_loader,
                  optimizer: torch.optim.Adam, loss_fn: torch.nn.modules.loss.MSELoss, 
-                 epochs: int, filepath: str, device: Optional[str] = None):
+                 epochs: int, filepath: str, device: str = None):
         """The class to support training process
         Args:
             model:                    Model to train
@@ -27,13 +27,14 @@ class Trainer:
         self.optimizer = optimizer
         self.loss_fn = loss_fn
 
-        self.train_len = 200
-        self.val_len = 200
+        self.train_len = len(train_loader)
+        self.val_len = len(val_loader)
         
         self.epochs = epochs
         self.filepath = filepath
-  
-        self.device = (device if device is not None else 'cpu')
+
+        self.device = (device if device is not None
+                       else "cpu")
 
         if not os.path.exists('./best_result'):
             os.mkdir('./best_result')
@@ -50,12 +51,11 @@ class Trainer:
 
         self.model.train()
         train_loss = 0
-        with tqdm(range(self.train_len)) as loop:
+        with tqdm(self.train_loader) as loop:
             # Description of current epoch
             loop.set_description('Epoch {}/{}'.format(epoch + 1, self.epochs))
 
-            for _ in enumerate(loop):
-                X, Y = self.train_loader()
+            for X, Y in loop:
                 X = X.to(self.device)
                 Y = Y.to(self.device)
 
@@ -66,6 +66,7 @@ class Trainer:
 
                 loss_item = loss.item()
                 train_loss += loss_item
+
                 loop.set_postfix_str('Loss: ' + str(round(loss_item, 3)))
                 loop.update(1)
 
@@ -85,8 +86,7 @@ class Trainer:
         self.model.eval()
         with torch.no_grad():
             test_loss = 0
-            for _ in range(self.val_len):
-                X, Y = self.val_loader()
+            for X, Y in self.val_loader:
                 X = X.to(self.device)
                 Y = Y.to(self.device)
 
@@ -102,7 +102,7 @@ class Trainer:
         """The function to control training"""
         writer = SummaryWriter()
 
-        best_test_loss = 0
+        best_test_loss = 1e16
         for epoch in range(epoch_start, self.epochs):
             print('-' * 50)
 
@@ -114,12 +114,12 @@ class Trainer:
 
             if test_loss <= best_test_loss:
                 # Saving the best model
+                best_test_loss = test_loss
                 print('The best model is saved at {:.3f}'.format(best_test_loss))
                 with open('best_result/best_result.txt', 'w') as fo:
                     fo.write("f1: {}".format(best_test_loss))
                 self.save_model()
-                best_test_loss = best_test_loss
-
+                
         writer.close()
 
     def save_model(self, filepath=None):
